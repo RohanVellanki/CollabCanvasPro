@@ -18,6 +18,8 @@ const Whiteboard = () => {
   const [cursors, setCursors] = useState({});
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
+  const [shapes, setShapes] = useState([]);
+  const [nextShapeId, setNextShapeId] = useState(1);
 
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
@@ -66,7 +68,8 @@ const Whiteboard = () => {
   };
 
   const redo = () => {
-    if(redoStack.length > 0) {
+    if(redoStack.length > 0) 
+    {
       const nextState = redoStack[redoStack.length - 1];
       setUndoStack(prev => [...prev, nextState]);
       setRedoStack(prev => prev.slice(0, -1));
@@ -105,12 +108,12 @@ const Whiteboard = () => {
     const context = canvas.getContext('2d');
     if(tool === 'highlighter') 
     {
-      context.globalAlpha = 0.05;
+      context.globalAlpha = 0.5;
       context.lineWidth = lineWidth * 2.5;
     } 
-    else 
+    else if(tool === 'pen') 
     {
-      context.globalAlpha = opacity;
+      context.globalAlpha = 1;
       context.lineWidth = lineWidth;
     }
     context.strokeStyle = tool === 'eraser' ? (darkMode ? '#282c34' : 'white') : color;
@@ -126,10 +129,12 @@ const Whiteboard = () => {
   };
 
   const stopDrawing = () => {
-    if(isDrawing) {
+    if(isDrawing) 
+    {
       setIsDrawing(false);
       saveToUndoStack();
-      if(socket) {
+      if(socket) 
+      {
         socket.emit('drawing-end');
       }
     }
@@ -156,93 +161,166 @@ const Whiteboard = () => {
     setDarkMode(!darkMode);
   };
 
+  const drawShape = (params) => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    const shapeId = `${params.shape}_${nextShapeId}`;
+    context.beginPath();
+    context.fillStyle = params.color;
+    context.strokeStyle = params.color;
+    context.lineWidth = 2;
+    switch(params.shape) 
+    {
+      case 'circle':
+        context.beginPath();
+        context.arc(params.x, params.y, params.radius, 0, Math.PI * 2);
+        context.stroke();
+        context.fill();
+        break;
+      case 'rectangle':
+        context.beginPath();
+        context.rect(params.x, params.y, params.width, params.height);
+        context.stroke();
+        context.fill();
+        break;
+    }
+    setShapes([...shapes, { id: shapeId, ...params }]);
+    setNextShapeId(nextShapeId + 1);
+    saveToUndoStack();
+  };
+
   const handleCommand = (command) => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
-  
-    switch (command.params.action) {
+    switch(command.params.action) 
+    {
       case 'draw':
-        setTool('pen');
-        if (command.params.color) {
+        if(command.params.tool === 'pen') 
+        {
+          setTool('pen');
+          context.globalAlpha = 1;
+        }
+        if(command.params.color) 
+        {
           setColor(command.params.color);
           context.strokeStyle = command.params.color;
         }
-        if (command.params.width) {
+        if(command.params.width) 
+        {
           setLineWidth(command.params.width);
           context.lineWidth = command.params.width;
         }
         break;
-  
+      case 'drawShape':
+        drawShape(command.params);
+        break;
       case 'highlight':
         setTool('highlighter');
+        context.globalAlpha = command.params.opacity || 0.5;
         if (command.params.color) {
           setColor(command.params.color);
           context.strokeStyle = command.params.color;
         }
-        if (command.params.opacity) {
-          setOpacity(command.params.opacity);
-          context.globalAlpha = command.params.opacity;
+        break;
+      case 'move':
+        const shapeToMove = shapes.find(s => s.id === command.params.shapeId);
+        if(shapeToMove) 
+        {
+          // Clear the area where the shape was
+          context.clearRect(
+            shapeToMove.x - 2,
+            shapeToMove.y - 2,
+            shapeToMove.width + 4 || (shapeToMove.radius * 2) + 4,
+            shapeToMove.height + 4 || (shapeToMove.radius * 2) + 4
+          );
+          // Draw the shape at new position
+          drawShape({
+            ...shapeToMove,
+            x: command.params.x,
+            y: command.params.y
+          });
         }
         break;
-  
-      case 'erase':
+
+      case 'delete':
+        const shapeToDelete = shapes.find(s => s.id === command.params.shapeId);
+        if(shapeToDelete) 
+        {
+          context.clearRect(
+            shapeToDelete.x - 2,
+            shapeToDelete.y - 2,
+            shapeToDelete.width + 4 || (shapeToDelete.radius * 2) + 4,
+            shapeToDelete.height + 4 || (shapeToDelete.radius * 2) + 4
+          );
+          setShapes(shapes.filter(s => s.id !== command.params.shapeId));
+          saveToUndoStack();
+        }
+        break;
+
+        case 'erase':
         setTool('eraser');
         context.strokeStyle = darkMode ? '#282c34' : 'white';
         break;
   
-      case 'clear':
-        context.fillStyle = darkMode ? '#282c34' : 'white';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        saveToUndoStack();
-        break;
+        case 'clear':
+          context.fillStyle = darkMode ? '#282c34' : 'white';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          saveToUndoStack();
+          break;
   
-      case 'undo':
-        if (undoStack.length > 1) {
-          const canvas = canvasRef.current;
-          const context = canvas.getContext('2d');
-          const lastState = undoStack[undoStack.length - 2];
-          const img = new Image();
-          img.src = lastState;
-          img.onload = () => {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            context.drawImage(img, 0, 0);
-            setUndoStack(prev => prev.slice(0, -1));
-            setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]]);
-          };
-        }
-        break;
+        case 'undo':
+          if(undoStack.length > 1) 
+          {
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+            const lastState = undoStack[undoStack.length - 2];
+            const img = new Image();
+            img.src = lastState;
+            img.onload = () => {
+              context.clearRect(0, 0, canvas.width, canvas.height);
+              context.drawImage(img, 0, 0);
+              setUndoStack(prev => prev.slice(0, -1));
+              setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]]);
+            };
+          }
+          break;
   
-      case 'redo':
-        if (redoStack.length > 0) {
-          const canvas = canvasRef.current;
-          const context = canvas.getContext('2d');
-          const nextState = redoStack[redoStack.length - 1];
-          const img = new Image();
-          img.src = nextState;
-          img.onload = () => {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            context.drawImage(img, 0, 0);
-            setUndoStack(prev => [...prev, nextState]);
-            setRedoStack(prev => prev.slice(0, -1));
-          };
-        }
-        break;
-  
-      case 'download':
-        downloadCanvas();
-        break;
-  
-      case 'theme':
-        if (command.params.mode === 'dark' && !darkMode) {
-          toggleDarkMode();
-        } else if (command.params.mode === 'light' && darkMode) {
-          toggleDarkMode();
-        }
-        break;
-  
-      case 'error':
-        console.error('Command error:', command.params.message);
-        break;
+        case 'redo':
+          if(redoStack.length > 0) 
+          {
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+            const nextState = redoStack[redoStack.length - 1];
+            const img = new Image();
+            img.src = nextState;
+            img.onload = () => {
+              context.clearRect(0, 0, canvas.width, canvas.height);
+              context.drawImage(img, 0, 0);
+              setUndoStack(prev => [...prev, nextState]);
+              setRedoStack(prev => prev.slice(0, -1));
+            };
+          }
+          break;
+    
+          case 'download':
+            downloadCanvas();
+            break;
+      
+          case 'theme':
+            if(command.params.mode === 'dark' && !darkMode) 
+            {
+              toggleDarkMode();
+            } 
+            else if(command.params.mode === 'light' && darkMode) 
+            {
+              toggleDarkMode();
+            }
+            break;
+      
+    
+        case 'error':
+          console.error('Command error:', command.params.message);
+          break;
     }
   };
 
