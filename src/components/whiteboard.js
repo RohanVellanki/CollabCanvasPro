@@ -1,26 +1,24 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-// The debounce function limits how often a function runs
 import { debounce } from 'lodash';
 import CursorOverlay from './CursorOverlay';
 import ToolPanel from './ToolPanel';
+import CommandInterface from './CommandInterface';
 
 const Whiteboard = () => {
-  // canvasRef allows interaction with the canvas API for drawing.
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 });
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(5);
   const [opacity, setOpacity] = useState(1);
-  const [tool, setTool] = useState('pen'); // pen, highlighter, eraser
+  const [tool, setTool] = useState('pen'); 
   const [darkMode, setDarkMode] = useState(false);
   const [socket, setSocket] = useState(null);
+  const [cursors, setCursors] = useState({});
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
-  const [cursors, setCursors] = useState({});
 
-  // Initialize socket connection
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
     setSocket(newSocket);
@@ -30,18 +28,13 @@ const Whiteboard = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
-    
-    // For smoother drawing
     context.lineCap = 'round';
     context.lineJoin = 'round';
     context.fillStyle = darkMode ? '#282c34' : 'white';
     context.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Save initial state
     saveToUndoStack();
   }, [darkMode]);
 
-  // Auto-save functionality
   const autoSave = debounce(() => {
     const canvas = canvasRef.current;
     const dataUrl = canvas.toDataURL();
@@ -56,18 +49,17 @@ const Whiteboard = () => {
   };
 
   const undo = () => {
-    if (undoStack.length > 1) {
+    if(undoStack.length > 1) 
+    {
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
       const lastState = undoStack[undoStack.length - 2];
-      
       const img = new Image();
       img.src = lastState;
       img.onload = () => {
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.drawImage(img, 0, 0);
       };
-
       setUndoStack(prev => prev.slice(0, -1));
       setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]]);
     }
@@ -76,10 +68,8 @@ const Whiteboard = () => {
   const redo = () => {
     if(redoStack.length > 0) {
       const nextState = redoStack[redoStack.length - 1];
-      
       setUndoStack(prev => [...prev, nextState]);
       setRedoStack(prev => prev.slice(0, -1));
-      
       const img = new Image();
       img.src = nextState;
       img.onload = () => {
@@ -93,7 +83,6 @@ const Whiteboard = () => {
 
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
-    // Converts mouse coordinates (clientX, clientY) to canvas coordinates using getBoundingClientRect()
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -103,7 +92,6 @@ const Whiteboard = () => {
     setIsDrawing(true);
     if(socket) 
     {
-      // emit: Sends the start position to the server
       socket.emit('drawing-start', { x, y, color, lineWidth, opacity, tool });
     }
   };
@@ -141,8 +129,6 @@ const Whiteboard = () => {
     if(isDrawing) {
       setIsDrawing(false);
       saveToUndoStack();
-      
-      // Emit drawing end event
       if(socket) {
         socket.emit('drawing-end');
       }
@@ -170,10 +156,99 @@ const Whiteboard = () => {
     setDarkMode(!darkMode);
   };
 
+  const handleCommand = (command) => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+  
+    switch (command.params.action) {
+      case 'draw':
+        setTool('pen');
+        if (command.params.color) {
+          setColor(command.params.color);
+          context.strokeStyle = command.params.color;
+        }
+        if (command.params.width) {
+          setLineWidth(command.params.width);
+          context.lineWidth = command.params.width;
+        }
+        break;
+  
+      case 'highlight':
+        setTool('highlighter');
+        if (command.params.color) {
+          setColor(command.params.color);
+          context.strokeStyle = command.params.color;
+        }
+        if (command.params.opacity) {
+          setOpacity(command.params.opacity);
+          context.globalAlpha = command.params.opacity;
+        }
+        break;
+  
+      case 'erase':
+        setTool('eraser');
+        context.strokeStyle = darkMode ? '#282c34' : 'white';
+        break;
+  
+      case 'clear':
+        context.fillStyle = darkMode ? '#282c34' : 'white';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        saveToUndoStack();
+        break;
+  
+      case 'undo':
+        if (undoStack.length > 1) {
+          const canvas = canvasRef.current;
+          const context = canvas.getContext('2d');
+          const lastState = undoStack[undoStack.length - 2];
+          const img = new Image();
+          img.src = lastState;
+          img.onload = () => {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(img, 0, 0);
+            setUndoStack(prev => prev.slice(0, -1));
+            setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]]);
+          };
+        }
+        break;
+  
+      case 'redo':
+        if (redoStack.length > 0) {
+          const canvas = canvasRef.current;
+          const context = canvas.getContext('2d');
+          const nextState = redoStack[redoStack.length - 1];
+          const img = new Image();
+          img.src = nextState;
+          img.onload = () => {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(img, 0, 0);
+            setUndoStack(prev => [...prev, nextState]);
+            setRedoStack(prev => prev.slice(0, -1));
+          };
+        }
+        break;
+  
+      case 'download':
+        downloadCanvas();
+        break;
+  
+      case 'theme':
+        if (command.params.mode === 'dark' && !darkMode) {
+          toggleDarkMode();
+        } else if (command.params.mode === 'light' && darkMode) {
+          toggleDarkMode();
+        }
+        break;
+  
+      case 'error':
+        console.error('Command error:', command.params.message);
+        break;
+    }
+  };
+
   return (
     <div className={`whiteboard-container ${darkMode ? 'dark' : ''}`}>
       <h2>Collab Canvas</h2>
-      
       <ToolPanel
         color={color}
         setColor={setColor}
@@ -207,6 +282,10 @@ const Whiteboard = () => {
           onMouseLeave={stopDrawing}
         />
         <CursorOverlay cursors={cursors} />
+        <CommandInterface 
+          onCommandExecute={handleCommand}
+          darkMode={darkMode}
+        />
       </div>
     </div>
   );
