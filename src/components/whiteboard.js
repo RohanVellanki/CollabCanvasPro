@@ -161,9 +161,12 @@ const Whiteboard = () => {
     setDarkMode(!darkMode);
   };
 
+  // params, which contains shape details like color, position, and size
   const drawShape = (params) => {
     const canvas = canvasRef.current;
+    // allows us to draw on the canvas
     const context = canvas.getContext('2d');
+    // Creates a unique ID for the shape
     const shapeId = `${params.shape}_${nextShapeId}`;
     context.beginPath();
     context.fillStyle = params.color;
@@ -171,6 +174,7 @@ const Whiteboard = () => {
     context.lineWidth = 2;
     switch(params.shape) 
     {
+      // arc() -> to draw circle with req radius, stroke() -> border, fill() -> fill color
       case 'circle':
         context.beginPath();
         context.arc(params.x, params.y, params.radius, 0, Math.PI * 2);
@@ -184,36 +188,44 @@ const Whiteboard = () => {
         context.fill();
         break;
     }
+    // Adds the new shape to the shapes list
     setShapes([...shapes, { id: shapeId, ...params }]);
+    // Increases the shape ID counter for the next shape
     setNextShapeId(nextShapeId + 1);
     saveToUndoStack();
   };
 
+  // processes different user actions like drawing, deleting, and moving shapes
   const handleCommand = (command) => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
     switch(command.params.action) 
     {
+      // If the action is "draw" and the tool is "pen", it sets the drawing tool to pen mode.
       case 'draw':
         if(command.params.tool === 'pen') 
         {
           setTool('pen');
           context.globalAlpha = 1;
         }
+        // updates the pen color
         if(command.params.color) 
         {
           setColor(command.params.color);
           context.strokeStyle = command.params.color;
         }
+        // updates the pen thickness
         if(command.params.width) 
         {
           setLineWidth(command.params.width);
           context.lineWidth = command.params.width;
         }
         break;
+      // to draw a new shape on the canvas
       case 'drawShape':
         drawShape(command.params);
         break;
+      // calls highlighter and sets color
       case 'highlight':
         setTool('highlighter');
         context.globalAlpha = command.params.opacity || 0.5;
@@ -222,6 +234,7 @@ const Whiteboard = () => {
           context.strokeStyle = command.params.color;
         }
         break;
+      // Finds the shape that the user wants to move
       case 'move':
         const shapeToMove = shapes.find(s => s.id === command.params.shapeId);
         if(shapeToMove) 
@@ -241,7 +254,7 @@ const Whiteboard = () => {
           });
         }
         break;
-
+      // Finds the shape to be deleted
       case 'delete':
         const shapeToDelete = shapes.find(s => s.id === command.params.shapeId);
         if(shapeToDelete) 
@@ -256,68 +269,66 @@ const Whiteboard = () => {
           saveToUndoStack();
         }
         break;
-
-        case 'erase':
+      // Uses "destination-out" mode to make brush strokes act as an eraser
+      case 'erase':
         setTool('eraser');
         context.strokeStyle = darkMode ? '#282c34' : 'white';
         break;
-  
-        case 'clear':
-          context.fillStyle = darkMode ? '#282c34' : 'white';
-          context.fillRect(0, 0, canvas.width, canvas.height);
-          saveToUndoStack();
+      // Clears the entire canvas and resets all stacks
+      case 'clear':
+        context.fillStyle = darkMode ? '#282c34' : 'white';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        saveToUndoStack();
+        break;
+      // Loads the second-last state from undoStack, redraws it, and updates redoStack
+      case 'undo':
+        if(undoStack.length > 1) 
+        {
+          const canvas = canvasRef.current;
+          const context = canvas.getContext('2d');
+          const lastState = undoStack[undoStack.length - 2];
+          const img = new Image();
+          img.src = lastState;
+          img.onload = () => {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(img, 0, 0);
+            setUndoStack(prev => prev.slice(0, -1));
+            setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]]);
+          };
+        }
+        break;
+      // Loads image from redoStack, redraws it, updates undoStack
+      case 'redo':
+        if(redoStack.length > 0) 
+        {
+          const canvas = canvasRef.current;
+          const context = canvas.getContext('2d');
+          const nextState = redoStack[redoStack.length - 1];
+          const img = new Image();
+          img.src = nextState;
+          img.onload = () => {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(img, 0, 0);
+            setUndoStack(prev => [...prev, nextState]);
+            setRedoStack(prev => prev.slice(0, -1));
+          };
+        }
+        break;
+        // Downloads the drawing as an image
+        case 'download':
+          downloadCanvas();
           break;
-  
-        case 'undo':
-          if(undoStack.length > 1) 
+        // Toggles between dark mode and light mode
+        case 'theme':
+          if(command.params.mode === 'dark' && !darkMode) 
           {
-            const canvas = canvasRef.current;
-            const context = canvas.getContext('2d');
-            const lastState = undoStack[undoStack.length - 2];
-            const img = new Image();
-            img.src = lastState;
-            img.onload = () => {
-              context.clearRect(0, 0, canvas.width, canvas.height);
-              context.drawImage(img, 0, 0);
-              setUndoStack(prev => prev.slice(0, -1));
-              setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]]);
-            };
+            toggleDarkMode();
+          } 
+          else if(command.params.mode === 'light' && darkMode) 
+          {
+            toggleDarkMode();
           }
           break;
-  
-        case 'redo':
-          if(redoStack.length > 0) 
-          {
-            const canvas = canvasRef.current;
-            const context = canvas.getContext('2d');
-            const nextState = redoStack[redoStack.length - 1];
-            const img = new Image();
-            img.src = nextState;
-            img.onload = () => {
-              context.clearRect(0, 0, canvas.width, canvas.height);
-              context.drawImage(img, 0, 0);
-              setUndoStack(prev => [...prev, nextState]);
-              setRedoStack(prev => prev.slice(0, -1));
-            };
-          }
-          break;
-    
-          case 'download':
-            downloadCanvas();
-            break;
-      
-          case 'theme':
-            if(command.params.mode === 'dark' && !darkMode) 
-            {
-              toggleDarkMode();
-            } 
-            else if(command.params.mode === 'light' && darkMode) 
-            {
-              toggleDarkMode();
-            }
-            break;
-      
-    
         case 'error':
           console.error('Command error:', command.params.message);
           break;
