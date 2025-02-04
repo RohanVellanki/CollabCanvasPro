@@ -4,6 +4,7 @@ import { debounce } from 'lodash';
 import CursorOverlay from './CursorOverlay';
 import ToolPanel from './ToolPanel';
 import CommandInterface from './CommandInterface';
+import StickyNote from './StickyNote';
 
 const Whiteboard = () => {
   const canvasRef = useRef(null);
@@ -20,6 +21,7 @@ const Whiteboard = () => {
   const [redoStack, setRedoStack] = useState([]);
   const [shapes, setShapes] = useState([]);
   const [nextShapeId, setNextShapeId] = useState(1);
+  const [stickyNotes, setStickyNotes] = useState([]);
 
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
@@ -335,6 +337,43 @@ const Whiteboard = () => {
     }
   };
 
+  // === Sticky Notes Functions ===
+  const addStickyNote = (x, y) => {
+    const newNote = {
+      id: Date.now(),
+      text: 'Double-click to edit',
+      authorName: 'Author',  // Default author name
+      x,
+      y,
+    };
+    setStickyNotes([...stickyNotes, newNote]);
+  };
+
+  const updateStickyNote = (id, newText) => {
+    setStickyNotes(stickyNotes.map(note =>
+      note.id === id ? { ...note, text: newText } : note
+    ));
+  };
+
+  const moveStickyNote = (id, x, y) => {
+    setStickyNotes(stickyNotes.map(note =>
+      note.id === id ? { ...note, x, y } : note
+    ));
+  };
+
+  const deleteStickyNote = (id) => {
+    setStickyNotes(stickyNotes.filter(note => note.id !== id));
+  };
+
+  const handleCanvasClick = (e) => {
+    if (tool === 'sticky-note') {
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - canvasRect.left;
+      const y = e.clientY - canvasRect.top;
+      addStickyNote(x, y);
+    }
+  };
+
   return (
     <div className={`whiteboard-container ${darkMode ? 'dark' : ''}`}>
       <h2>Collab Canvas</h2>
@@ -370,6 +409,22 @@ const Whiteboard = () => {
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
         />
+        /* Render Sticky Notes */
+        {stickyNotes.map(note => (
+          <StickyNote
+            key={note.id}
+            id={note.id}
+            text={note.text}
+            authorName={note.authorName}  // Pass the authorName prop
+            x={note.x}
+            y={note.y}
+            onMove={moveStickyNote}
+            onUpdate={updateStickyNote}
+            onDelete={deleteStickyNote}
+          />
+        ))}
+
+              
         <CursorOverlay cursors={cursors} />
         <CommandInterface 
           onCommandExecute={handleCommand}
