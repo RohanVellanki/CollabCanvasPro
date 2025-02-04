@@ -311,3 +311,83 @@
 .dark .command-btn:hover {
   background: #357abd;
 }
+
+/* Sticky Note styles */
+
+.sticky-note-header {
+  font-size: 12px;
+  font-weight: italic;
+  margin-bottom: 5px;
+}
+
+
+
+.sticky-note-footer {
+  font-size: 12px;
+  font-weight: italic;
+  margin-top: 5px;
+  text-align: left;
+}
+
+
+
+.delete-button {
+  position: absolute;
+  top: -8px;  /* Moves the button slightly above */
+  right: -8px; /* Moves the button slightly to the right */
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+
+.sticky-note {
+  position: absolute;
+  background-color: yellow;
+  padding: 15px;
+  border-radius: 8px;
+  cursor: move;
+  width: 250px;
+  min-height: 150px; /* Minimum height */
+  max-width: 300px;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+  font-size: 16px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Ensures content is spaced out with footer at the bottom */
+}
+
+.sticky-note-text {
+  font-size: 14px;
+  font-family: sans-serif;
+  text-align: left;
+  padding: 5px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap; /* Keeps formatting */
+  flex-grow: 1; /* Ensures the text area takes up available space */
+}
+
+.sticky-note-footer {
+  font-size: 12px;
+  font-weight: italic;
+  margin-top: 5px;
+  text-align: left;
+  flex-shrink: 0; /* Prevents shrinking */
+}
+
+.sticky-note-textarea {
+  width: 100%;
+  min-height: 100px;
+  border: none;
+  background-color: transparent;
+  font-size: 14px;
+  font-family: sans-serif;
+  resize: none;
+  padding: 5px;
+  outline: none;
+  overflow: hidden; /* Prevents unnecessary scroll */
+}
