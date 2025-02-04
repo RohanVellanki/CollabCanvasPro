@@ -3,6 +3,7 @@ import {
   Pencil,
   Highlighter,
   Eraser,
+  StickyNote,
   Undo2,
   Redo2,
   Trash2,
@@ -50,6 +51,14 @@ const ToolPanel = ({
           title="Eraser"
         >
           <Eraser size={20} />
+        </button>
+            
+        <button 
+          className={`tool-btn ${tool === 'sticky-note' ? 'active' : ''}`}
+          onClick={() => setTool('sticky-note')}
+          title="Sticky Note"
+        >
+          <StickyNote size={20} />
         </button>
       </div>
 
