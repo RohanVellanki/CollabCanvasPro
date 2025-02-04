@@ -404,6 +404,7 @@ const Whiteboard = () => {
             backgroundColor: darkMode ? '#282c34' : 'white',
             borderRadius: '8px',
           }}
+          onClick={handleCanvasClick}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
