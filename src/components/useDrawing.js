@@ -5,10 +5,14 @@ export const useDrawing = ({
   lastPosition,
   setLastPosition,
   color,
+  setColor, // Add this line
   lineWidth,
+  setLineWidth, // Add this line
   opacity,
   tool,
+  setTool, // Add this line
   darkMode,
+  setDarkMode, // Add this line
   socket,
   undoStack,
   setUndoStack,
@@ -20,12 +24,7 @@ export const useDrawing = ({
   setNextShapeId,
   autoSave,
   saveToUndoStack,
-  clearCanvas,
-  setTool,
-  setColor,
-  setLineWidth,
-  drawShape,
-  setDarkMode
+  drawShape
 }) => {
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
@@ -108,6 +107,14 @@ export const useDrawing = ({
     }
   };
 
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    context.fillStyle = darkMode ? '#282c34' : 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    saveToUndoStack();
+  };
+
   const handleCommand = (command) => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
@@ -171,9 +178,7 @@ export const useDrawing = ({
         context.strokeStyle = darkMode ? '#282c34' : 'white';
         break;
       case 'clear':
-        context.fillStyle = darkMode ? '#282c34' : 'white';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        saveToUndoStack();
+        clearCanvas();
         break;
       case 'undo':
         undo();

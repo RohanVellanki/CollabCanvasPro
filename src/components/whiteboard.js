@@ -67,6 +67,33 @@ const Whiteboard = () => {
     link.click();
   };
 
+  const drawShape = (params) => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    const shapeId = `${params.shape}_${nextShapeId}`;
+    context.beginPath();
+    context.fillStyle = params.color;
+    context.strokeStyle = params.color;
+    context.lineWidth = 2;
+    switch(params.shape) {
+      case 'circle':
+        context.beginPath();
+        context.arc(params.x, params.y, params.radius, 0, Math.PI * 2);
+        context.stroke();
+        context.fill();
+        break;
+      case 'rectangle':
+        context.beginPath();
+        context.rect(params.x, params.y, params.width, params.height);
+        context.stroke();
+        context.fill();
+        break;
+    }
+    setShapes([...shapes, { id: shapeId, ...params }]);
+    setNextShapeId(nextShapeId + 1);
+    saveToUndoStack();
+  };
+
   const { 
     startDrawing, 
     draw, 
@@ -82,10 +109,15 @@ const Whiteboard = () => {
     lastPosition,
     setLastPosition,
     color,
+    setColor, // Add this line
     lineWidth,
+    setLineWidth, // Add this line
     opacity,
+    setOpacity, // Add this line
     tool,
+    setTool, // Add this line
     darkMode,
+    setDarkMode, // Add this line
     socket,
     undoStack,
     setUndoStack,
@@ -97,7 +129,7 @@ const Whiteboard = () => {
     setNextShapeId,
     autoSave,
     saveToUndoStack,
-    setDarkMode
+    drawShape
   });
 
   return (
