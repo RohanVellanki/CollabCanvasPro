@@ -1,17 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { Mic, StopCircle, Terminal } from 'lucide-react';
 
-// onCommandExecute to handle commands
 const CommandInterface = ({ onCommandExecute, darkMode }) => {
-  // holds the command typed by the user
   const [command, setCommand] = useState('');
-  // checks whether voice recognition is currently listening
   const [isListening, setIsListening] = useState(false);
   const [showCommandBox, setShowCommandBox] = useState(true);
-  // used to store the speech recognition instance
   const recognitionRef = useRef(null);
 
-  // converts coordinates in the form (x, y) into an object with x and y as integers
   const parseCoordinates = (str) => {
     const coords = str.replace('(', '').replace(')', '').split(',');
     return {
@@ -20,7 +15,6 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
     };
   };
 
-  // splits the command string into words and checks the first work "action"
   const parseCommand = (cmdString) => {
     const tokens = cmdString.toLowerCase().split(' ');
     const command = {
@@ -31,7 +25,6 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
     try {
       switch(command.action) 
       {
-        // checks if the user wants to draw with a pen and then extracts the color and width.
         case 'draw':
           if(tokens[1] === 'with') 
           { 
@@ -43,7 +36,6 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
               command.params.width = parseInt(tokens[4]);
             }
           } 
-          // recognises shape drawing command
           else 
           { 
             command.params.action = 'drawShape';
@@ -51,13 +43,11 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
             const coordIndex = tokens.findIndex(t => t.startsWith('('));
             if(coordIndex !== -1) 
             {
-              // This finds the coordinates and stores them as x and y
               const coords = parseCoordinates(tokens[coordIndex]);
               command.params.x = coords.x;
               command.params.y = coords.y;
               if(command.params.shape === 'circle') 
               {
-                // gets the radius from the command and stores it in command.params.radius
                 const radiusIndex = tokens.indexOf('radius');
                 if(radiusIndex !== -1) 
                 {
@@ -66,8 +56,6 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
               } 
               else if(command.params.shape === 'rectangle') 
               {
-                // looks for width and height in the tokens and stores them in 
-                // command.params.width and command.params.height
                 const widthIndex = tokens.indexOf('width');
                 const heightIndex = tokens.indexOf('height');
                 if(widthIndex !== -1) 
@@ -149,14 +137,10 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
   const handleCommandSubmit = (e) => {
     if(e) e.preventDefault();
     const parsedCommand = parseCommand(command);
-    // for Executing the command
     onCommandExecute(parsedCommand);
-    // Clears the input box
     setCommand('');
   };
 
-  // This function starts voice recognition using the browser's speech API 
-  // When speech is recognized, it updates the command with the spoken words
   const startVoiceRecognition = () => {
     if('webkitSpeechRecognition' in window) 
     {
@@ -186,7 +170,6 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
       alert('Speech recognition is not supported in this browser.');
     }
   };
-  // stops the voice recognition when the user presses the stop button
   const stopVoiceRecognition = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
