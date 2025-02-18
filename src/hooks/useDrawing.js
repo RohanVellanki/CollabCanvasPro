@@ -1,3 +1,8 @@
+// src/hooks/useDrawing.js
+
+import { useEffect, useRef } from 'react';
+import CanvasDrawingService from '../services/CanvasDrawingService';
+
 export const useDrawing = ({
   canvasRef,
   isDrawing,
@@ -5,14 +10,14 @@ export const useDrawing = ({
   lastPosition,
   setLastPosition,
   color,
-  setColor, // Add this line
+  setColor,
   lineWidth,
-  setLineWidth, // Add this line
+  setLineWidth,
   opacity,
   tool,
-  setTool, // Add this line
+  setTool,
   darkMode,
-  setDarkMode, // Add this line
+  setDarkMode,
   socket,
   undoStack,
   setUndoStack,
@@ -23,46 +28,62 @@ export const useDrawing = ({
   nextShapeId,
   setNextShapeId,
   autoSave,
-  saveToUndoStack,
-  drawShape
+  saveToUndoStack
 }) => {
+  const drawingServiceRef = useRef(null);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      drawingServiceRef.current = new CanvasDrawingService(canvasRef.current);
+    }
+  }, [canvasRef]);
+
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const context = canvas.getContext('2d');
-    context.beginPath();
+    
+    drawingServiceRef.current.setStyle({
+      strokeStyle: color,
+      lineWidth,
+      globalAlpha: opacity,
+      tool,
+      darkMode
+    });
+    
+    drawingServiceRef.current.startPath(x, y);
     setLastPosition({ x, y });
     setIsDrawing(true);
+
     if(socket) {
       socket.emit('drawing-start', { x, y, color, lineWidth, opacity, tool });
     }
   };
 
   const draw = (e) => {
-    if(!isDrawing) return;
+    if (!isDrawing) return;
+    
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const context = canvas.getContext('2d');
-    if(tool === 'highlighter') {
-      context.globalAlpha = 0.5;
-      context.lineWidth = lineWidth * 2.5;
-    } else if(tool === 'pen') {
-      context.globalAlpha = 1;
-      context.lineWidth = lineWidth;
-    }
-    context.strokeStyle = tool === 'eraser' ? (darkMode ? '#282c34' : 'white') : color;
-    context.moveTo(lastPosition.x, lastPosition.y);
-    context.lineTo(x, y);
-    context.stroke();
+
+    drawingServiceRef.current.continuePath(x, y);
     setLastPosition({ x, y });
+
     if(socket) {
       socket.emit('drawing', { x, y, color, lineWidth, opacity, tool });
     }
     autoSave();
+  };
+
+  const drawShape = (params) => {
+    drawingServiceRef.current.drawShape(params);
+    const shapeId = `${params.shape}_${nextShapeId}`;
+    setShapes([...shapes, { id: shapeId, ...params }]);
+    setNextShapeId(nextShapeId + 1);
+    saveToUndoStack();
   };
 
   const stopDrawing = () => {
@@ -75,79 +96,60 @@ export const useDrawing = ({
     }
   };
 
-  const undo = () => {
+  const clearCanvas = () => {
+    drawingServiceRef.current.clearCanvas(darkMode);
+    saveToUndoStack();
+  };
+
+  const undo = async () => {
     if(undoStack.length > 1) {
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
       const lastState = undoStack[undoStack.length - 2];
-      const img = new Image();
-      img.src = lastState;
-      img.onload = () => {
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(img, 0, 0);
-      };
+      await drawingServiceRef.current.loadImageData(lastState);
       setUndoStack(prev => prev.slice(0, -1));
       setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]]);
     }
   };
 
-  const redo = () => {
+  const redo = async () => {
     if(redoStack.length > 0) {
       const nextState = redoStack[redoStack.length - 1];
+      await drawingServiceRef.current.loadImageData(nextState);
       setUndoStack(prev => [...prev, nextState]);
       setRedoStack(prev => prev.slice(0, -1));
-      const img = new Image();
-      img.src = nextState;
-      img.onload = () => {
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(img, 0, 0);
-      };
     }
   };
 
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    context.fillStyle = darkMode ? '#282c34' : 'white';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    saveToUndoStack();
-  };
-
   const handleCommand = (command) => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
+    const drawingService = drawingServiceRef.current;
+    
     switch(command.params.action) {
       case 'draw':
         if(command.params.tool === 'pen') {
           setTool('pen');
-          context.globalAlpha = 1;
-        }
-        if(command.params.color) {
-          setColor(command.params.color);
-          context.strokeStyle = command.params.color;
-        }
-        if(command.params.width) {
-          setLineWidth(command.params.width);
-          context.lineWidth = command.params.width;
+          drawingService.setStyle({
+            globalAlpha: 1,
+            strokeStyle: command.params.color,
+            lineWidth: command.params.width
+          });
         }
         break;
+        
       case 'drawShape':
         drawShape(command.params);
         break;
+        
       case 'highlight':
         setTool('highlighter');
-        context.globalAlpha = command.params.opacity || 0.5;
-        if (command.params.color) {
-          setColor(command.params.color);
-          context.strokeStyle = command.params.color;
-        }
+        drawingService.setStyle({
+          globalAlpha: command.params.opacity || 0.5,
+          strokeStyle: command.params.color
+        });
         break;
+        
       case 'move':
         const shapeToMove = shapes.find(s => s.id === command.params.shapeId);
         if(shapeToMove) {
-          context.clearRect(
+          drawingService.clearRect(
             shapeToMove.x - 2,
             shapeToMove.y - 2,
             shapeToMove.width + 4 || (shapeToMove.radius * 2) + 4,
@@ -160,10 +162,11 @@ export const useDrawing = ({
           });
         }
         break;
+        
       case 'delete':
         const shapeToDelete = shapes.find(s => s.id === command.params.shapeId);
         if(shapeToDelete) {
-          context.clearRect(
+          drawingService.clearRect(
             shapeToDelete.x - 2,
             shapeToDelete.y - 2,
             shapeToDelete.width + 4 || (shapeToDelete.radius * 2) + 4,
@@ -173,26 +176,32 @@ export const useDrawing = ({
           saveToUndoStack();
         }
         break;
+        
       case 'erase':
         setTool('eraser');
-        context.strokeStyle = darkMode ? '#282c34' : 'white';
+        drawingService.setStyle({ tool: 'eraser', darkMode });
         break;
+        
       case 'clear':
         clearCanvas();
         break;
+        
       case 'undo':
         undo();
         break;
+        
       case 'redo':
         redo();
         break;
+        
       case 'download':
-        const dataUrl = canvas.toDataURL('image/png');
+        const dataUrl = drawingService.getImageData();
         const link = document.createElement('a');
         link.download = 'whiteboard.png';
         link.href = dataUrl;
         link.click();
         break;
+        
       case 'theme':
         if(command.params.mode === 'dark' && !darkMode) {
           setDarkMode(true);
@@ -200,6 +209,7 @@ export const useDrawing = ({
           setDarkMode(false);
         }
         break;
+        
       case 'error':
         console.error('Command error:', command.params.message);
         break;
@@ -213,6 +223,7 @@ export const useDrawing = ({
     clearCanvas,
     handleCommand,
     undo,
-    redo
+    redo,
+    drawShape
   };
 };
