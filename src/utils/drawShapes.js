@@ -1,4 +1,4 @@
-export const drawShape = (context, params) => {
+export const drawShapeOnCanvas = (context, params) => {
   const { shape, x, y, width, height, radius, color, preview } = params;
   
   context.beginPath();
@@ -20,10 +20,12 @@ export const drawShape = (context, params) => {
       
     case 'square':
       const size = Math.min(Math.abs(width), Math.abs(height));
+      context.beginPath();
       context.rect(x, y, size, size);
       break;
       
     case 'rectangle':
+      context.beginPath();
       context.rect(x, y, width, height);
       break;
       
@@ -36,6 +38,7 @@ export const drawShape = (context, params) => {
       let rot = Math.PI / 2 * 3;
       const step = Math.PI / spikes;
 
+      context.beginPath();
       context.moveTo(cx, cy - outerRadius);
       for (let i = 0; i < spikes; i++) {
         context.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius);

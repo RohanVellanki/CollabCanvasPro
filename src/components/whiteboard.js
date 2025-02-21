@@ -8,6 +8,8 @@ import StickyNote from './StickyNote';
 import { useStickyNotes } from './useStickyNotes';
 import { useDrawing } from './useDrawing';
 import ShapeToolPanel from './ShapeToolPanel';
+import { useShapeDrawing } from '../hooks/useShapeDrawing';
+import { drawShapeOnCanvas } from '../utils/drawShapes';
 
 const Whiteboard = () => {
   const canvasRef = useRef(null);
@@ -25,25 +27,12 @@ const Whiteboard = () => {
   const [shapes, setShapes] = useState([]);
   const [nextShapeId, setNextShapeId] = useState(1);
   const { stickyNotes, addStickyNote, updateStickyNote, moveStickyNote, deleteStickyNote, handleCanvasClick } = useStickyNotes(tool, canvasRef);
-  const [selectedShape, setSelectedShape] = useState(null);
-  const [isDrawingShape, setIsDrawingShape] = useState(false);
-  const [shapeStartPos, setShapeStartPos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
     setSocket(newSocket);
     return () => newSocket.disconnect();
   }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    context.fillStyle = darkMode ? '#282c34' : 'white';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    saveToUndoStack();
-  }, [darkMode]);
 
   const autoSave = debounce(() => {
     const canvas = canvasRef.current;
@@ -57,6 +46,25 @@ const Whiteboard = () => {
     setUndoStack(prev => [...prev, dataUrl]);
     setRedoStack([]);
   };
+
+  const {
+    selectedShape,
+    setSelectedShape,
+    isDrawingShape,
+    handleShapeMouseDown,
+    handleShapeMouseMove,
+    handleShapeMouseUp
+  } = useShapeDrawing(canvasRef, color, undoStack, setShapes, setNextShapeId, nextShapeId, saveToUndoStack);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.fillStyle = darkMode ? '#282c34' : 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    saveToUndoStack();
+  }, [darkMode]);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -171,67 +179,34 @@ const Whiteboard = () => {
     drawShape
   });
 
+  // Add this new function to handle tool changes
+  const handleToolChange = (newTool) => {
+    setTool(newTool);
+    // Deselect shape when switching to another tool
+    if (selectedShape) {
+      setSelectedShape(null);
+    }
+  };
+
   const handleMouseDown = (e) => {
     if (selectedShape) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      setShapeStartPos({ x, y });
-      setIsDrawingShape(true);
+      handleShapeMouseDown(e);
     } else {
       startDrawing(e);
     }
   };
 
   const handleMouseMove = (e) => {
-    if (isDrawingShape && selectedShape) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const context = canvasRef.current.getContext('2d');
-      
-      // Clear the canvas and redraw from saved state
-      const img = new Image();
-      img.src = undoStack[undoStack.length - 1];
-      img.onload = () => {
-        context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        context.drawImage(img, 0, 0);
-        
-        // Draw the shape preview
-        drawShape({
-          shape: selectedShape,
-          x: shapeStartPos.x,
-          y: shapeStartPos.y,
-          width: x - shapeStartPos.x,
-          height: y - shapeStartPos.y,
-          radius: Math.abs(x - shapeStartPos.x) / 2,
-          color: color,
-          preview: true
-        });
-      };
+    if (selectedShape) {
+      handleShapeMouseMove(e);
     } else {
       draw(e);
     }
   };
 
   const handleMouseUp = (e) => {
-    if (isDrawingShape && selectedShape) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      drawShape({
-        shape: selectedShape,
-        x: shapeStartPos.x,
-        y: shapeStartPos.y,
-        width: x - shapeStartPos.x,
-        height: y - shapeStartPos.y,
-        radius: Math.abs(x - shapeStartPos.x) / 2,
-        color: color
-      });
-      
-      setIsDrawingShape(false);
-      saveToUndoStack();
+    if (selectedShape) {
+      handleShapeMouseUp(e);
     } else {
       stopDrawing(e);
     }
@@ -249,7 +224,7 @@ const Whiteboard = () => {
           opacity={opacity}
           setOpacity={setOpacity}
           tool={tool}
-          setTool={setTool}
+          setTool={handleToolChange} // Replace setTool with handleToolChange
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
           undo={undo}
@@ -259,7 +234,10 @@ const Whiteboard = () => {
         />
         <ShapeToolPanel
           selectedShape={selectedShape}
-          setSelectedShape={setSelectedShape}
+          setSelectedShape={(shape) => {
+            setSelectedShape(shape);
+            setTool('shape'); // Set tool to 'shape' when selecting a shape
+          }}
         />
       </div>
       

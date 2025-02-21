@@ -28,26 +28,30 @@ const ToolPanel = ({
   clearCanvas,
   downloadCanvas
 }) => {
+  const handleToolClick = (toolName) => {
+    setTool(toolName);
+  };
+
   return (
     <div className="tools-row">
       <div className="tool-group">
         <button 
           className={`tool-btn ${tool === 'pen' ? 'active' : ''}`}
-          onClick={() => setTool('pen')}
+          onClick={() => handleToolClick('pen')}
           title="Pen"
         >
           <Pencil size={20} />
         </button>
         <button 
           className={`tool-btn ${tool === 'highlighter' ? 'active' : ''}`}
-          onClick={() => setTool('highlighter')}
+          onClick={() => handleToolClick('highlighter')}
           title="Highlighter"
         >
           <Highlighter size={20} />
         </button>
         <button 
           className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
-          onClick={() => setTool('eraser')}
+          onClick={() => handleToolClick('eraser')}
           title="Eraser"
         >
           <Eraser size={20} />
@@ -55,7 +59,7 @@ const ToolPanel = ({
             
         <button 
           className={`tool-btn ${tool === 'sticky-note' ? 'active' : ''}`}
-          onClick={() => setTool('sticky-note')}
+          onClick={() => handleToolClick('sticky-note')}
           title="Sticky Note"
         >
           <StickyNote size={20} />
