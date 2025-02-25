@@ -31,8 +31,32 @@ const Whiteboard = () => {
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
     setSocket(newSocket);
+
+    newSocket.on('drawing-start', ({ x, y, color, lineWidth, opacity, tool }) => {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      context.beginPath();
+      context.moveTo(x, y);
+      context.strokeStyle = tool === 'eraser' ? (darkMode ? '#282c34' : 'white') : color;
+      context.lineWidth = lineWidth;
+      context.globalAlpha = opacity;
+    });
+
+    newSocket.on('drawing', ({ x, y, color, lineWidth, opacity, tool }) => {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      context.lineTo(x, y);
+      context.stroke();
+    });
+
+    newSocket.on('drawing-end', () => {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      context.closePath();
+    });
+
     return () => newSocket.disconnect();
-  }, []);
+  }, [darkMode]);
 
   const autoSave = debounce(() => {
     const canvas = canvasRef.current;
@@ -156,15 +180,15 @@ const Whiteboard = () => {
     lastPosition,
     setLastPosition,
     color,
-    setColor, // Add this line
+    setColor,
     lineWidth,
-    setLineWidth, // Add this line
+    setLineWidth,
     opacity,
-    setOpacity, // Add this line
+    setOpacity,
     tool,
-    setTool, // Add this line
+    setTool,
     darkMode,
-    setDarkMode, // Add this line
+    setDarkMode,
     socket,
     undoStack,
     setUndoStack,
@@ -179,10 +203,8 @@ const Whiteboard = () => {
     drawShape
   });
 
-  // Add this new function to handle tool changes
   const handleToolChange = (newTool) => {
     setTool(newTool);
-    // Deselect shape when switching to another tool
     if (selectedShape) {
       setSelectedShape(null);
     }
@@ -224,7 +246,7 @@ const Whiteboard = () => {
           opacity={opacity}
           setOpacity={setOpacity}
           tool={tool}
-          setTool={handleToolChange} // Replace setTool with handleToolChange
+          setTool={handleToolChange}
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
           undo={undo}
@@ -236,7 +258,7 @@ const Whiteboard = () => {
           selectedShape={selectedShape}
           setSelectedShape={(shape) => {
             setSelectedShape(shape);
-            setTool('shape'); // Set tool to 'shape' when selecting a shape
+            setTool('shape');
           }}
         />
       </div>
