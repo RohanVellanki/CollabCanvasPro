@@ -48,8 +48,15 @@ export const useDrawing = ({
     const y = e.clientY - rect.top;
     const context = canvas.getContext('2d');
     context.strokeStyle = tool === 'eraser' ? (darkMode ? '#282c34' : 'white') : color;
-    context.lineWidth = lineWidth;
-    context.globalAlpha = opacity;
+
+    if(tool === 'highlighter') {
+      context.globalAlpha = 0.1; // Set fixed low opacity for highlighter
+      context.lineWidth = lineWidth * 2; // Make highlighter thicker
+    } else {
+      context.globalAlpha = opacity;
+      context.lineWidth = lineWidth;
+    }
+
     context.lineTo(x, y);
     context.stroke();
     setLastPosition({ x, y });

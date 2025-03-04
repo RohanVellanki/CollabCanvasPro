@@ -96,13 +96,27 @@ const ToolPanel = ({
       </div>
 
       <div className="tool-group">
-        <button onClick={undo} className="tool-btn" title="Undo">
+        <button 
+          onClick={undo} 
+          className="tool-btn" 
+          title="Undo"
+          disabled={!undo}
+        >
           <Undo2 size={20} />
         </button>
-        <button onClick={redo} className="tool-btn" title="Redo">
+        <button 
+          onClick={redo} 
+          className="tool-btn" 
+          title="Redo"
+          disabled={!redo}
+        >
           <Redo2 size={20} />
         </button>
-        <button onClick={clearCanvas} className="tool-btn" title="Clear">
+        <button 
+          onClick={clearCanvas} 
+          className="tool-btn" 
+          title="Clear Canvas"
+        >
           <Trash2 size={20} />
         </button>
         <button onClick={downloadCanvas} className="tool-btn" title="Download">

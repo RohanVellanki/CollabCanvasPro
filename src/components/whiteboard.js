@@ -8,10 +8,13 @@ import StickyNote from './StickyNote';
 import { useStickyNotes } from './useStickyNotes';
 import { useDrawing } from './useDrawing';
 import ShapeToolPanel from './ShapeToolPanel';
+import TemplateSelector from './TemplateSelector';
 import { useShapeDrawing } from '../hooks/useShapeDrawing';
 import { drawShapeOnCanvas } from '../utils/drawShapes';
+import CanvasDrawingService from '../services/CanvasDrawingService';
+import '../styles/Whiteboard.css';
 
-const Whiteboard = () => {
+const Whiteboard = ({ canvasWidth, canvasHeight }) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 });
@@ -24,6 +27,7 @@ const Whiteboard = () => {
   const [cursors, setCursors] = useState({});
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
+  const [drawingService, setDrawingService] = useState(null);
   const [shapes, setShapes] = useState([]);
   const [nextShapeId, setNextShapeId] = useState(1);
   const { stickyNotes, addStickyNote, updateStickyNote, moveStickyNote, deleteStickyNote, handleCanvasClick } = useStickyNotes(tool, canvasRef);
@@ -57,6 +61,18 @@ const Whiteboard = () => {
 
     return () => newSocket.disconnect();
   }, [darkMode]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const service = new CanvasDrawingService(canvas);
+    setDrawingService(service);
+    const context = canvas.getContext('2d');
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.fillStyle = darkMode ? '#282c34' : 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    saveToUndoStack();
+  }, [darkMode, canvasWidth, canvasHeight]);
 
   const autoSave = debounce(() => {
     const canvas = canvasRef.current;
@@ -101,6 +117,14 @@ const Whiteboard = () => {
     link.download = 'whiteboard.png';
     link.href = dataUrl;
     link.click();
+  };
+
+  const loadTemplate = (templateName) => {
+    if (drawingService) {
+      drawingService.loadTemplate(templateName).then(() => {
+        saveToUndoStack();
+      });
+    }
   };
 
   const drawShape = (params) => {
@@ -165,14 +189,55 @@ const Whiteboard = () => {
     }
   };
 
+  const undo = () => {
+    if (undoStack.length > 1) {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      const lastState = undoStack[undoStack.length - 2];
+      const currentState = undoStack[undoStack.length - 1];
+      
+      const img = new Image();
+      img.src = lastState;
+      img.onload = () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(img, 0, 0);
+        setUndoStack(prev => prev.slice(0, -1));
+        setRedoStack(prev => [...prev, currentState]);
+      };
+    }
+  };
+
+  const redo = () => {
+    if (redoStack.length > 0) {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      const nextState = redoStack[redoStack.length - 1];
+      
+      const img = new Image();
+      img.src = nextState;
+      img.onload = () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(img, 0, 0);
+        setUndoStack(prev => [...prev, nextState]);
+        setRedoStack(prev => prev.slice(0, -1));
+      };
+    }
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    context.fillStyle = darkMode ? '#282c34' : 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    setShapes([]); // Clear shapes array
+    saveToUndoStack(); // Save the cleared state
+  };
+
   const { 
     startDrawing, 
     draw, 
     stopDrawing, 
-    clearCanvas, 
-    handleCommand, 
-    undo, 
-    redo 
+    handleCommand 
   } = useDrawing({
     canvasRef,
     isDrawing,
@@ -262,12 +327,14 @@ const Whiteboard = () => {
           }}
         />
       </div>
+
+      <TemplateSelector loadTemplate={loadTemplate} />
       
       <div className="canvas-container">
         <canvas
           ref={canvasRef}
-          width={1500}
-          height={800}
+          width={canvasWidth}
+          height={canvasHeight}
           style={{ 
             border: '1px solid #e0e0e0',
             backgroundColor: darkMode ? '#282c34' : 'white',
