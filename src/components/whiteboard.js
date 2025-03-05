@@ -13,6 +13,7 @@ import { useShapeDrawing } from '../hooks/useShapeDrawing';
 import { drawShapeOnCanvas } from '../utils/drawShapes';
 import CanvasDrawingService from '../services/CanvasDrawingService';
 import '../styles/Whiteboard.css';
+import { drawPatterns, getCanvasPosition } from '../utils/drawPatterns';
 
 const Whiteboard = ({ canvasWidth, canvasHeight }) => {
   const canvasRef = useRef(null);
@@ -299,6 +300,82 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
     }
   };
 
+  const handleCommandExecute = (command) => {
+    // Handle pattern drawing commands
+    if (command.action === 'drawPattern') {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      const pos = getCanvasPosition(command.location, canvas);
+      
+      if (drawPatterns[command.pattern]) {
+        drawPatterns[command.pattern](
+          context,
+          pos.x,
+          pos.y,
+          command.size,
+          command.color
+        );
+        saveToUndoStack();
+      }
+      return;
+    }
+
+    // Handle basic shape and drawing commands
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    
+    switch(command.params?.action) {
+      case 'draw':
+        if(command.params.tool === 'pen') {
+          setTool('pen');
+          context.globalAlpha = 1;
+        }
+        if(command.params.color) {
+          setColor(command.params.color);
+          context.strokeStyle = command.params.color;
+        }
+        if(command.params.width) {
+          setLineWidth(command.params.width);
+          context.lineWidth = command.params.width;
+        }
+        break;
+      case 'drawShape':
+        drawShape(command.params);
+        break;
+      case 'highlight':
+        setTool('highlighter');
+        context.globalAlpha = command.params.opacity || 0.5;
+        if (command.params.color) {
+          setColor(command.params.color);
+          context.strokeStyle = command.params.color;
+        }
+        break;
+      case 'erase':
+        setTool('eraser');
+        context.strokeStyle = darkMode ? '#282c34' : 'white';
+        break;
+      case 'clear':
+        clearCanvas();
+        break;
+      case 'undo':
+        undo();
+        break;
+      case 'redo':
+        redo();
+        break;
+      case 'theme':
+        if(command.params.mode === 'dark' && !darkMode) {
+          setDarkMode(true);
+        } else if(command.params.mode === 'light' && darkMode) {
+          setDarkMode(false);
+        }
+        break;
+      case 'error':
+        console.error('Command error:', command.params.message);
+        break;
+    }
+  };
+
   return (
     <div className={`whiteboard-container ${darkMode ? 'dark' : ''}`}>
       <h2>Collab Canvas</h2>
@@ -361,7 +438,7 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
         ))}
         <CursorOverlay cursors={cursors} />
         <CommandInterface 
-          onCommandExecute={handleCommand}
+          onCommandExecute={handleCommandExecute}
           darkMode={darkMode}
         />
       </div>

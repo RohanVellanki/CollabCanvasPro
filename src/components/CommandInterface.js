@@ -1,5 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Mic, StopCircle, Terminal } from 'lucide-react';
+import NLPService from '../services/NLPService';
+import { drawPatterns, getCanvasPosition } from '../utils/drawPatterns';
+import NLPCommandService from '../services/NLPCommandService';
 
 const CommandInterface = ({ onCommandExecute, darkMode }) => {
   const [command, setCommand] = useState('');
@@ -16,6 +19,20 @@ const CommandInterface = ({ onCommandExecute, darkMode }) => {
   };
 
   const parseCommand = (cmdString) => {
+    // First try NLP parsing for predefined shapes
+    if (NLPCommandService.isPredefinedShape(cmdString)) {
+      return NLPCommandService.parseNLPCommand(cmdString);
+    }
+
+    // First try to parse as a pattern command
+    if (cmdString.toLowerCase().startsWith('draw')) {
+      const nlpCommand = NLPService.parseCommand(cmdString);
+      if (NLPService.validateCommand(nlpCommand)) {
+        return nlpCommand;
+      }
+    }
+
+    // If not a pattern command, use existing command parsing
     const tokens = cmdString.toLowerCase().split(' ');
     const command = {
       action: tokens[0],
