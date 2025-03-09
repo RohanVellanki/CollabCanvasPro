@@ -1,0 +1,79 @@
+.camera-preview {
+  padding: 10px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background-color: white;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.camera-preview.dark {
+  background-color: #2c2c2c;
+  color: white;
+}
+
+.camera-preview h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.camera-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background-color: #000;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.camera-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-error {
+  color: #ff4444;
+  text-align: center;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 14px;
+}
+
+.camera-controls {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.camera-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s, transform 0.1s;
+}
+
+.camera-button:active {
+  transform: scale(0.98);
+}
+
+.camera-button.start {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.camera-button.stop {
+  background-color: #f44336;
+  color: white;
+}
+
+.camera-button:hover {
+  opacity: 0.9;
+}

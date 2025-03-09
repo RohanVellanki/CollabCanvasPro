@@ -1,42 +1,43 @@
 import { useState } from 'react';
 
-export const useStickyNotes = (tool, canvasRef) => {
+export const useStickyNotes = () => {
   const [stickyNotes, setStickyNotes] = useState([]);
+  const [nextId, setNextId] = useState(1);
 
-  const addStickyNote = (x, y) => {
+  const addStickyNote = ({ x, y, text, color }) => {
     const newNote = {
-      id: Date.now(),
-      text: 'Double-click to edit',
-      authorName: 'Author',
+      id: nextId,
       x,
       y,
+      text: text || '',
+      color: color || '#ffeb3b' // Use provided color or default to yellow
     };
-    setStickyNotes([...stickyNotes, newNote]);
+    setStickyNotes(prev => [...prev, newNote]);
+    setNextId(prev => prev + 1);
   };
 
-  const updateStickyNote = (id, newText) => {
-    setStickyNotes(stickyNotes.map(note =>
-      note.id === id ? { ...note, text: newText } : note
-    ));
+  const updateStickyNote = (id, text, color) => {
+    setStickyNotes(prev =>
+      prev.map(note =>
+        note.id === id 
+          ? { ...note, text: text || note.text, color: color || note.color }
+          : note
+      )
+    );
   };
 
   const moveStickyNote = (id, x, y) => {
-    setStickyNotes(stickyNotes.map(note =>
-      note.id === id ? { ...note, x, y } : note
-    ));
+    setStickyNotes(prev =>
+      prev.map(note =>
+        note.id === id ? { ...note, x, y } : note
+      )
+    );
   };
 
   const deleteStickyNote = (id) => {
-    setStickyNotes(stickyNotes.filter(note => note.id !== id));
-  };
-
-  const handleCanvasClick = (e) => {
-    if(tool === 'sticky-note') {
-      const canvasRect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - canvasRect.left;
-      const y = e.clientY - canvasRect.top;
-      addStickyNote(x, y);
-    }
+    setStickyNotes(prev =>
+      prev.filter(note => note.id !== id)
+    );
   };
 
   return {
@@ -44,7 +45,6 @@ export const useStickyNotes = (tool, canvasRef) => {
     addStickyNote,
     updateStickyNote,
     moveStickyNote,
-    deleteStickyNote,
-    handleCanvasClick
+    deleteStickyNote
   };
 };

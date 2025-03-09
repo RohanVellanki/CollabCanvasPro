@@ -1,3 +1,5 @@
+import { templates } from '../templates/templates';
+
 class CanvasDrawingService {
   constructor(canvas) {
     this.canvas = canvas;
@@ -100,16 +102,38 @@ class CanvasDrawingService {
     });
   }
 
-  loadTemplate(templateName) {
+  async loadTemplate(templateId) {
+    try {
+      if (templateId === 'blank') {
+        this.context.fillStyle = '#ffffff';
+        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        return;
+      }
+
+      const templateUrl = templates[templateId];
+      if (!templateUrl) {
+        console.error(`Template not found: ${templateId}`);
+        return;
+      }
+
+      await this.loadImageFromUrl(templateUrl);
+    } catch (error) {
+      console.error('Error loading template:', error);
+    }
+  }
+
+  async loadImageFromUrl(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.src = `/templates/${templateName}.png`; // Adjust the path as needed
       img.onload = () => {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.context.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
         resolve();
       };
-      img.onerror = reject;
+      img.onerror = () => {
+        reject(new Error(`Failed to load image: ${url}`));
+      };
+      img.src = url;
     });
   }
 }

@@ -1,0 +1,142 @@
+.sticky-notes-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.sticky-note {
+  position: absolute;
+  min-width: 150px;
+  min-height: 150px;
+  padding: 15px;
+  background-color: #feff9c;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+  pointer-events: all;
+  cursor: move;
+  transform: rotate(-1deg);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sticky-note:hover {
+  transform: rotate(0deg) scale(1.02);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.sticky-note textarea {
+  width: 100%;
+  height: 120px;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+}
+
+.sticky-note-text {
+  font-family: 'Comic Sans MS', cursive;
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.sticky-note-footer {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.delete-note {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.5;
+}
+
+.delete-note:hover {
+  opacity: 1;
+}
+
+.delete-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #ff4444;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sticky-note:hover .delete-button {
+  opacity: 1;
+}
+
+.color-picker-button {
+  position: absolute;
+  top: 5px;
+  right: 30px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.color-picker-button:hover {
+  opacity: 1;
+}
+
+.color-picker-popup {
+  position: absolute;
+  top: 30px;
+  right: 5px;
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.color-option {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+}
+
+.sticky-note-textarea {
+  width: 100%;
+  min-height: 100px;
+  border: none;
+  background: transparent;
+  font-family: 'Comic Sans MS', cursive;
+  font-size: 1rem;
+  color: #333;
+  resize: none;
+  outline: none;
+}

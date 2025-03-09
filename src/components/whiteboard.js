@@ -5,21 +5,24 @@ import CursorOverlay from './CursorOverlay';
 import ToolPanel from './ToolPanel';
 import CommandInterface from './CommandInterface';
 import StickyNote from './StickyNote';
-import { useStickyNotes } from './useStickyNotes';
+import { useStickyNotes } from '../hooks/useStickyNotes';
 import { useDrawing } from './useDrawing';
-import ShapeToolPanel from './ShapeToolPanel';
 import TemplateSelector from './TemplateSelector';
 import { useShapeDrawing } from '../hooks/useShapeDrawing';
 import { drawShapeOnCanvas } from '../utils/drawShapes';
 import CanvasDrawingService from '../services/CanvasDrawingService';
 import '../styles/Whiteboard.css';
 import { drawPatterns, getCanvasPosition } from '../utils/drawPatterns';
+import CollaboratorsPanel from './CollaboratorsPanel';
+import QuickTools from './QuickTools';
+import StickyNotes from './StickyNotes';
+import RightSidebar from './RightSidebar';
 
-const Whiteboard = ({ canvasWidth, canvasHeight }) => {
+const Whiteboard = (canvasWidth, canvasHeight) => {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 });
-  const [color, setColor] = useState('#000000');
+  const [color, setColor] = useState('#000000'); // Default black
   const [lineWidth, setLineWidth] = useState(5);
   const [opacity, setOpacity] = useState(1);
   const [tool, setTool] = useState('pen'); 
@@ -31,7 +34,16 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
   const [drawingService, setDrawingService] = useState(null);
   const [shapes, setShapes] = useState([]);
   const [nextShapeId, setNextShapeId] = useState(1);
-  const { stickyNotes, addStickyNote, updateStickyNote, moveStickyNote, deleteStickyNote, handleCanvasClick } = useStickyNotes(tool, canvasRef);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  const { stickyNotes, addStickyNote, updateStickyNote, moveStickyNote, deleteStickyNote } = useStickyNotes();
+  const [stickyNoteMode, setStickyNoteMode] = useState(false);
+  const [isDrawingShape, setIsDrawingShape] = useState(false);
+  const [shapeStart, setShapeStart] = useState({ x: 0, y: 0 });
+
+  const handleShapeSelect = (shape) => {
+    setSelectedShape(shape);
+    setTool('shape');
+  };
 
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
@@ -91,7 +103,7 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
   const {
     selectedShape,
     setSelectedShape,
-    isDrawingShape,
+    isDrawingShape: isDrawingShapeHook,
     handleShapeMouseDown,
     handleShapeMouseMove,
     handleShapeMouseUp
@@ -106,6 +118,41 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
     context.fillRect(0, 0, canvas.width, canvas.height);
     saveToUndoStack();
   }, [darkMode]);
+
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const container = document.querySelector('.canvas-container');
+      if (container) {
+        // Get the actual container dimensions
+        const containerWidth = container.clientWidth - 40; // Account for padding
+        const containerHeight = container.clientHeight - 40;
+
+        // Set canvas size to match container while maintaining aspect ratio
+        setCanvasSize({
+          width: containerWidth,
+          height: containerHeight
+        });
+      }
+    };
+
+    // Initial size update
+    updateCanvasSize();
+    
+    // Add resize listener
+    const resizeObserver = new ResizeObserver(updateCanvasSize);
+    const container = document.querySelector('.canvas-container');
+    if (container) {
+      resizeObserver.observe(container);
+    }
+
+    // Cleanup
+    return () => {
+      if (container) {
+        resizeObserver.unobserve(container);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -271,12 +318,28 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
 
   const handleToolChange = (newTool) => {
     setTool(newTool);
+    setStickyNoteMode(newTool === 'sticky');
+    // Set color to yellow when switching to sticky notes, black for other tools
+    setColor(newTool === 'sticky' ? '#ffeb3b' : '#000000');
     if (selectedShape) {
       setSelectedShape(null);
     }
   };
 
   const handleMouseDown = (e) => {
+    if (tool === 'shape' && selectedShape) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      setShapeStart({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      setIsDrawingShape(true);
+      return;
+    }
+    if (tool === 'sticky') {
+      // Don't start drawing when using sticky notes
+      return;
+    }
     if (selectedShape) {
       handleShapeMouseDown(e);
     } else {
@@ -285,6 +348,36 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
   };
 
   const handleMouseMove = (e) => {
+    if (isDrawingShape && selectedShape) {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+
+      // Clear the canvas and redraw the previous state
+      const lastState = undoStack[undoStack.length - 1];
+      const img = new Image();
+      img.src = lastState;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(img, 0, 0);
+
+      // Draw the shape preview
+      drawShapeOnCanvas(context, {
+        shape: selectedShape,
+        x: shapeStart.x,
+        y: shapeStart.y,
+        width: currentX - shapeStart.x,
+        height: currentY - shapeStart.y,
+        color: color,
+        preview: true
+      });
+      return;
+    }
+    if (tool === 'sticky') {
+      // Don't draw when using sticky notes
+      return;
+    }
     if (selectedShape) {
       handleShapeMouseMove(e);
     } else {
@@ -293,10 +386,45 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
   };
 
   const handleMouseUp = (e) => {
+    if (isDrawingShape && selectedShape) {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+
+      drawShapeOnCanvas(context, {
+        shape: selectedShape,
+        x: shapeStart.x,
+        y: shapeStart.y,
+        width: currentX - shapeStart.x,
+        height: currentY - shapeStart.y,
+        color: color,
+        preview: false
+      });
+
+      setIsDrawingShape(false);
+      saveToUndoStack();
+      return;
+    }
     if (selectedShape) {
       handleShapeMouseUp(e);
     } else {
       stopDrawing(e);
+    }
+  };
+
+  const handleClick = (e) => {
+    if (tool === 'sticky') {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      addStickyNote({ 
+        x, 
+        y, 
+        text: '', 
+        color: '#ffeb3b' // Always use yellow for sticky notes
+      });
     }
   };
 
@@ -377,71 +505,82 @@ const Whiteboard = ({ canvasWidth, canvasHeight }) => {
   };
 
   return (
-    <div className={`whiteboard-container ${darkMode ? 'dark' : ''}`}>
-      <h2>Collab Canvas</h2>
-      <div className="toolbar">
-        <ToolPanel
+    <div className="app-container">
+      <header className="header">
+        <div className="logo-section">
+          <h1 className="logo">CollabCanvas</h1>
+          <button 
+            className="theme-toggle tool-button"
+            onClick={toggleDarkMode}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
+        <div className="header-actions">
+          <button className="action-button" onClick={undo} disabled={undoStack.length <= 1}>
+            ↩️ Undo
+          </button>
+          <button className="action-button" onClick={redo} disabled={redoStack.length === 0}>
+            ↪️ Redo
+          </button>
+          <button className="action-button" onClick={downloadCanvas}>
+            💾 Save
+          </button>
+        </div>
+      </header>
+
+      <aside className="tools-section">
+        <QuickTools
+          tool={tool}
+          setTool={handleToolChange}
           color={color}
           setColor={setColor}
           lineWidth={lineWidth}
           setLineWidth={setLineWidth}
           opacity={opacity}
           setOpacity={setOpacity}
-          tool={tool}
-          setTool={handleToolChange}
-          darkMode={darkMode}
-          toggleDarkMode={toggleDarkMode}
-          undo={undo}
-          redo={redo}
-          clearCanvas={clearCanvas}
-          downloadCanvas={downloadCanvas}
-        />
-        <ShapeToolPanel
           selectedShape={selectedShape}
-          setSelectedShape={(shape) => {
-            setSelectedShape(shape);
-            setTool('shape');
-          }}
+          setSelectedShape={handleShapeSelect}
+          canvasRef={canvasRef}
         />
-      </div>
+      </aside>
 
-      <TemplateSelector loadTemplate={loadTemplate} />
-      
-      <div className="canvas-container">
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth}
-          height={canvasHeight}
-          style={{ 
-            border: '1px solid #e0e0e0',
-            backgroundColor: darkMode ? '#282c34' : 'white',
-            borderRadius: '8px',
-          }}
-          onClick={handleCanvasClick}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        />
-        {stickyNotes.map(note => (
-          <StickyNote
-            key={note.id}
-            id={note.id}
-            text={note.text}
-            authorName={note.authorName}
-            x={note.x}
-            y={note.y}
-            onMove={moveStickyNote}
-            onUpdate={updateStickyNote}
-            onDelete={deleteStickyNote}
+      <main className="canvas-section">
+        <div className="canvas-container">
+          <canvas
+            ref={canvasRef}
+            width={canvasSize.width}
+            height={canvasSize.height}
+            style={{ 
+              backgroundColor: darkMode ? '#333333' : 'white',
+              borderRadius: '8px',
+              width: '100%',
+              height: '100%'
+            }}
+            onClick={handleClick}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
           />
-        ))}
-        <CursorOverlay cursors={cursors} />
-        <CommandInterface 
-          onCommandExecute={handleCommandExecute}
-          darkMode={darkMode}
-        />
-      </div>
+          <CursorOverlay cursors={cursors} />
+          <StickyNotes
+            notes={stickyNotes}
+            onAdd={addStickyNote}
+            onUpdate={updateStickyNote}
+            onMove={moveStickyNote}
+            onDelete={deleteStickyNote}
+            color={color}
+          />
+        </div>
+      </main>
+
+      <RightSidebar 
+        collaborators={[]} // Pass your collaborators data here
+        loadTemplate={loadTemplate}
+        onCommandExecute={handleCommandExecute}
+        darkMode={darkMode}
+      />
     </div>
   );
 };
