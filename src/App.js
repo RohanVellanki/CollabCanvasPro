@@ -50,6 +50,7 @@ const App = () => {
       <Routes>
         <Route path="/start" element={<RoomSelection />} />
         <Route path="/" element={renderWhiteboard()} />
+        <Route path="/:roomId" element={<Whiteboard canvasWidth={canvasWidth} canvasHeight={canvasHeight} />} />
       </Routes>
     </Router>
   );
