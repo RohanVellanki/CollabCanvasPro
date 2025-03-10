@@ -1,0 +1,147 @@
+.room-selection-container {
+    background: linear-gradient(135deg, #FFF9C4 0%, #FFE0B2 100%);
+  }
+  
+  .main-card {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 32px rgba(255, 182, 193, 0.2);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .title {
+    color: #FF5252;
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.1);
+  }
+  
+  .subtitle {
+    color: #757575;
+    font-weight: 500;
+  }
+  
+  .create-room-btn {
+    background: #fe8f6d !important;
+    border: none !important;
+    transition: transform 0.2s !important;
+    color: white !important;
+    font-weight: 600 !important;
+  }
+  
+  .create-room-btn:hover {
+    background: #ff9574 !important;
+    transform: translateY(-2px);
+  }
+  
+  .join-room-btn {
+    background: #FF4081 !important;
+    border: none !important;
+    transition: transform 0.2s !important;
+    color: white !important;
+    font-weight: 600 !important;
+  }
+  
+  .join-room-btn:hover {
+    background: #F50057 !important;
+    transform: translateY(-2px);
+  }
+  
+  .room-input {
+    font-size: 1.25rem !important;
+    padding: 1rem !important;
+    border: 2px solid #FFE0B2 !important;
+    border-radius: 12px !important;
+    transition: all 0.2s !important;
+    color: #424242 !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+  }
+  
+  .room-input:focus {
+    border-color: #FF7043 !important;
+    box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.2) !important;
+  }
+  
+  .divider {
+    position: relative;
+    color: #FF4081;
+    padding: 0 1rem;
+    font-weight: 500;
+  }
+  
+  .divider::before,
+  .divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45px;
+    height: 2px;
+    background: #FFE0B2;
+  }
+  
+  .divider::before {
+    right: 100%;
+  }
+  
+  .divider::after {
+    left: 100%;
+  }
+  
+  .room-code {
+    background: #424242;
+    border: none;
+    border-radius: 12px;
+    padding: 1.2rem;
+    font-family: monospace;
+    font-size: 2rem;
+    color: #FFF;
+    letter-spacing: 2px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .copy-btn {
+    border: 2px solid #FF7043 !important;
+    color: #FF7043 !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
+  }
+  
+  .copy-btn:hover {
+    background: #FF7043 !important;
+    color: white !important;
+    transform: translateY(-1px);
+  }
+  
+  .enter-room-btn {
+    background: #FF7043 !important;
+    border: none !important;
+    padding: 0.75rem 2.5rem !important;
+    color: white !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
+  }
+  
+  .enter-room-btn:hover {
+    background: #F4511E !important;
+    transform: translateY(-1px);
+  }
+  
+  .copy-alert {
+    background: #FF4081 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .room-modal .modal-content {
+    border-radius: 16px;
+    border: none;
+    background: #FFF;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .modal-title {
+    color: #FF5252;
+    font-weight: 700;
+  }
