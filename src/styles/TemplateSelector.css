@@ -1,0 +1,50 @@
+.template-selector {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+    text-align: center;
+  }
+  
+  .template-selector h3 {
+    margin-bottom: 15px;
+    font-size: 16px;
+  }
+  
+  .template-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  
+  /* ...rest of your existing styles... */
+  
+  .template-button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .template-button:hover {
+    background-color: #f0f0f0;
+  }
+  
+  /* Dark mode styles */
+  .dark .template-selector {
+    background-color: #363636;
+    border-color: #484848;
+  }
+  
+  .dark .template-button {
+    background-color: #363636;
+    border-color: #484848;
+    color: white;
+  }
+  
+  .dark .template-button:hover {
+    background-color: #484848;
+  }
