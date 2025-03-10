@@ -11,7 +11,7 @@ const templates = {
   template3: { name: 'Brainstorm', icon: '🧠', id: 'template3' }
 };
 
-const RightSidebar = ({ collaborators, loadTemplate, onCommandExecute, darkMode }) => {
+const RightSidebar = ({ collaborators, loadTemplate, onCommandExecute, darkMode, canvasRef }) => {
   const [activeTemplate, setActiveTemplate] = useState(null);
   const [sidebarSection, setSidebarSection] = useState('templates'); // templates, commands, camera
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -107,7 +107,20 @@ const RightSidebar = ({ collaborators, loadTemplate, onCommandExecute, darkMode 
         )}
         {sidebarSection === 'camera' && (
           <div className="camera-preview-wrapper">
-            <CameraPreview darkMode={darkMode} />
+            <CameraPreview 
+                darkMode={darkMode} 
+                canvasRef={canvasRef}
+                onHandMove={({ x, y, isDrawing }) => {
+                    if (isDrawing && canvasRef.current) {
+                    // Trigger drawing on the canvas
+                    const event = new MouseEvent('mousemove', {
+                        clientX: x,
+                        clientY: y
+                    });
+                    canvasRef.current.dispatchEvent(event);
+                    }
+                }}
+                />
           </div>
         )}
       </div>
