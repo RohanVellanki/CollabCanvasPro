@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { useParams } from 'react-router-dom';
 import { debounce } from 'lodash';
 import CursorOverlay from './CursorOverlay';
 import ToolPanel from './ToolPanel';
@@ -39,6 +40,8 @@ const Whiteboard = (canvasWidth, canvasHeight) => {
   const [stickyNoteMode, setStickyNoteMode] = useState(false);
   const [isDrawingShape, setIsDrawingShape] = useState(false);
   const [shapeStart, setShapeStart] = useState({ x: 0, y: 0 });
+  const { roomId } = useParams();
+  const [collaborators, setCollaborators] = useState(0);
 
   const handleShapeSelect = (shape) => {
     setSelectedShape(shape);
@@ -48,6 +51,62 @@ const Whiteboard = (canvasWidth, canvasHeight) => {
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
     setSocket(newSocket);
+    if (roomId) {
+      newSocket.emit('join-room', roomId);
+    }
+
+
+// Listen for room data (initial state)
+newSocket.on('room-data', (data) => {
+  const canvas = canvasRef.current;
+  const context = canvas.getContext('2d');
+
+  // Clear canvas first
+  context.fillStyle = darkMode ? '#282c34' : 'white';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  // If there's a current state, draw it
+  if (data.currentState) {
+    const img = new Image();
+    img.src = data.currentState;
+    img.onload = () => {
+      context.drawImage(img, 0, 0);
+    };
+  }
+
+  // Then apply any new strokes
+  if (data.strokes) {
+    data.strokes.forEach(stroke => {
+      if (stroke.type === 'start') {
+        context.beginPath();
+        context.moveTo(stroke.x, stroke.y);
+        context.strokeStyle = stroke.tool === 'eraser' ? (darkMode ? '#282c34' : 'white') : stroke.color;
+        context.lineWidth = stroke.lineWidth;
+        context.globalAlpha = stroke.opacity;
+      } else if (stroke.type === 'draw') {
+        context.lineTo(stroke.x, stroke.y);
+        context.stroke();
+              }
+            });
+          }
+        });
+
+
+
+
+
+
+
+
+    newSocket.on('canvas-state-update', (dataUrl) => {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      const img = new Image();
+      img.src = dataUrl;
+      img.onload = () => {
+        context.drawImage(img, 0, 0);
+      };
+    });
 
     newSocket.on('drawing-start', ({ x, y, color, lineWidth, opacity, tool }) => {
       const canvas = canvasRef.current;
@@ -72,8 +131,56 @@ const Whiteboard = (canvasWidth, canvasHeight) => {
       context.closePath();
     });
 
+        // Add these new listeners
+        newSocket.on('user-joined', (count) => {
+          setCollaborators(count);
+        });
+      
+        newSocket.on('user-left', (count) => {
+          setCollaborators(count);
+        });
+      
+        newSocket.on('canvas-undo-update', ({ lastState, undoStack: newUndoStack, redoStack: newRedoStack }) => {
+          const canvas = canvasRef.current;
+          const context = canvas.getContext('2d');
+          
+          // Clear canvas first
+          context.fillStyle = darkMode ? '#282c34' : 'white';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw the previous state
+          const img = new Image();
+          img.src = lastState;
+          img.onload = () => {
+            context.drawImage(img, 0, 0);
+            // Update local stacks
+            setUndoStack(newUndoStack);
+            setRedoStack(newRedoStack);
+          };
+        });
+      
+        newSocket.on('canvas-redo-update', ({ nextState, undoStack: newUndoStack, redoStack: newRedoStack }) => {
+          const canvas = canvasRef.current;
+          const context = canvas.getContext('2d');
+          
+          // Clear canvas first
+          context.fillStyle = darkMode ? '#282c34' : 'white';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw the next state
+          const img = new Image();
+          img.src = nextState;
+          img.onload = () => {
+            context.drawImage(img, 0, 0);
+            // Update local stacks
+            setUndoStack(newUndoStack);
+            setRedoStack(newRedoStack);
+          };
+        });
+      
+
     return () => newSocket.disconnect();
-  }, [darkMode]);
+  }, [darkMode, roomId]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -98,6 +205,10 @@ const Whiteboard = (canvasWidth, canvasHeight) => {
     const dataUrl = canvas.toDataURL();
     setUndoStack(prev => [...prev, dataUrl]);
     setRedoStack([]);
+    // Sync canvas state with other users
+    if (socket && roomId) {
+      socket.emit('canvas-state', { roomId, dataUrl });
+    }
   };
 
   const {
@@ -237,38 +348,35 @@ const Whiteboard = (canvasWidth, canvasHeight) => {
     }
   };
 
+  // Modify the undo function
   const undo = () => {
-    if (undoStack.length > 1) {
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
+    if (undoStack.length > 1 && socket && roomId) {
       const lastState = undoStack[undoStack.length - 2];
       const currentState = undoStack[undoStack.length - 1];
       
-      const img = new Image();
-      img.src = lastState;
-      img.onload = () => {
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(img, 0, 0);
-        setUndoStack(prev => prev.slice(0, -1));
-        setRedoStack(prev => [...prev, currentState]);
-      };
+      // Emit the undo action to all users in the room
+      socket.emit('canvas-undo', {
+        roomId,
+        lastState,
+        currentState,
+        undoStack: undoStack.slice(0, -1),
+        redoStack: [...redoStack, currentState]
+      });
     }
   };
 
+  // Modify the redo function
   const redo = () => {
-    if (redoStack.length > 0) {
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
+    if (redoStack.length > 0 && socket && roomId) {
       const nextState = redoStack[redoStack.length - 1];
       
-      const img = new Image();
-      img.src = nextState;
-      img.onload = () => {
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(img, 0, 0);
-        setUndoStack(prev => [...prev, nextState]);
-        setRedoStack(prev => prev.slice(0, -1));
-      };
+      // Emit the redo action to all users in the room
+      socket.emit('canvas-redo', {
+        roomId,
+        nextState,
+        undoStack: [...undoStack, nextState],
+        redoStack: redoStack.slice(0, -1)
+      });
     }
   };
 
@@ -313,7 +421,8 @@ const Whiteboard = (canvasWidth, canvasHeight) => {
     setNextShapeId,
     autoSave,
     saveToUndoStack,
-    drawShape
+    drawShape,
+    roomId
   });
 
   const handleToolChange = (newTool) => {
@@ -516,6 +625,19 @@ const Whiteboard = (canvasWidth, canvasHeight) => {
             {darkMode ? '☀️' : '🌙'}
           </button>
         </div>
+        <div className="room-info">
+      <span className="room-id">Room: {roomId}</span>
+      <span className="collaborators-count">
+        <svg 
+          className="collaborators-icon" 
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+        {collaborators}
+      </span>
+    </div>
         <div className="header-actions">
           <button className="action-button" onClick={undo} disabled={undoStack.length <= 1}>
             ↩️ Undo
