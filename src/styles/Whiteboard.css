@@ -492,3 +492,42 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* ...rest of existing styles... */
+
+
+
+
+
+.room-info {
+  position: absolute;
+  top: 8px;
+  right: 320px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+}
+
+
+.dark .room-info {
+  background-color: rgba(40, 44, 52, 0.9);
+  color: white;
+}
+
+.room-id {
+  font-weight: bold;
+}
+
+.collaborators-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.collaborators-icon {
+  width: 16px;
+  height: 16px;
+}
