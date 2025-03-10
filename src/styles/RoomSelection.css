@@ -1,0 +1,117 @@
+.room-selection-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .main-card {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .title {
+    color: #2d3748;
+    font-size: 2.5rem;
+    font-weight: 700;
+  }
+  
+  .subtitle {
+    color: #4a5568;
+  }
+  
+  .create-room-btn {
+    background: #4c51bf !important;
+    border: none !important;
+    transition: transform 0.2s !important;
+  }
+  
+  .create-room-btn:hover {
+    background: #434190 !important;
+    transform: translateY(-2px);
+  }
+  
+  .join-room-btn {
+    background: #48bb78 !important;
+    border: none !important;
+    transition: transform 0.2s !important;
+  }
+  
+  .join-room-btn:hover {
+    background: #38a169 !important;
+    transform: translateY(-2px);
+  }
+  
+  .room-input {
+    font-size: 1.25rem !important;
+    padding: 1rem !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    transition: all 0.2s !important;
+  }
+  
+  .room-input:focus {
+    border-color: #4c51bf !important;
+    box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.2) !important;
+  }
+  
+  .divider {
+    position: relative;
+    color: #718096;
+    padding: 0 1rem;
+  }
+  
+  .divider::before,
+  .divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45px;
+    height: 1px;
+    background: #cbd5e0;
+  }
+  
+  .divider::before {
+    right: 100%;
+  }
+  
+  .divider::after {
+    left: 100%;
+  }
+  
+  .room-code {
+    background: #f7fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    font-family: monospace;
+    font-size: 2rem;
+    color: #2d3748;
+  }
+  
+  .copy-btn {
+    border: 2px solid #4c51bf !important;
+    color: #4c51bf !important;
+  }
+  
+  .copy-btn:hover {
+    background: #4c51bf !important;
+    color: white !important;
+  }
+  
+  .enter-room-btn {
+    background: #4c51bf !important;
+    border: none !important;
+    padding: 0.75rem 2.5rem !important;
+  }
+  
+  .copy-alert {
+    background: #48bb78 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+  }
+  
+  .room-modal .modal-content {
+    border-radius: 16px;
+    border: none;
+  }
