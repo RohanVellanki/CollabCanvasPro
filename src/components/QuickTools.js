@@ -170,6 +170,21 @@ const QuickTools = ({
           </div>
         )}
       </div>
+
+      <div className={`quick-tools-section shapes-section ${showShapes ? 'active' : ''}`}>
+        <div className="shapes-grid">
+          {shapes.map(shape => (
+            <button
+              key={shape.id}
+              className={`shape-button ${selectedShape === shape.id ? 'active' : ''}`}
+              onClick={() => handleShapeSelect(shape.id)}
+              title={shape.label}
+            >
+              <span className="shape-icon">{shape.icon}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
