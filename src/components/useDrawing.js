@@ -24,7 +24,8 @@ export const useDrawing = ({
   setNextShapeId,
   autoSave,
   saveToUndoStack,
-  drawShape
+  drawShape,
+  roomId
 }) => {
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
@@ -36,7 +37,7 @@ export const useDrawing = ({
     setLastPosition({ x, y });
     setIsDrawing(true);
     if(socket) {
-      socket.emit('drawing-start', { x, y, color, lineWidth, opacity, tool });
+      socket.emit('drawing-start', { x, y, color, lineWidth, opacity, tool , roomId});
     }
   };
 
@@ -71,7 +72,7 @@ export const useDrawing = ({
       setIsDrawing(false);
       saveToUndoStack();
       if(socket) {
-        socket.emit('drawing-end');
+        socket.emit('drawing-end', roomId);
       }
     }
   };
