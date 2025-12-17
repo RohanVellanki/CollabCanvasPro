@@ -6,13 +6,16 @@
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/drawing_utils": "^0.3.1675466124",
     "@mediapipe/hands": "^0.4.1675469240",
+    "@techstark/opencv-js": "^4.7.0-release.1",
     "@tensorflow-models/handpose": "^0.1.0",
     "@tensorflow/tfjs": "^4.22.0",
+    "autopy": "^1.1.1",
     "bootstrap": "^5.3.3",
     "cors": "^2.8.5",
     "cra-template": "1.2.0",
     "express": "^4.21.2",
     "lucide-react": "^0.471.0",
+    "numpy": "^0.0.1",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
     "react-colorful": "^5.6.1",
@@ -21,10 +24,7 @@
     "react-scripts": "^5.0.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "web-vitals": "^4.2.4",
-    "@techstark/opencv-js": "^4.7.0-release.1",
-    "autopy": "^1.1.1",
-    "numpy": "^0.0.1"
+    "web-vitals": "^4.2.4"
   },
   "scripts": {
     "start": "react-scripts start",
